@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
 import 'constants.dart';
-import 'validators.dart';
 import 'anime_data.dart';
+import 'storage_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -37,15 +37,13 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  final usernameController = TextEditingController();
   bool isLoading = false;
   String? errorMessage;
 
   @override
   void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
+    usernameController.dispose();
     super.dispose();
   }
 
@@ -59,8 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final result = await AuthService.login(
-        email: emailController.text.trim(),
-        password: passwordController.text,
+        username: usernameController.text.trim(),
       );
 
       if (!mounted) return;
@@ -115,23 +112,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 50),
                   TextFormField(
-                    controller: emailController,
-                    validator: InputValidator.validateEmail,
+                    controller: usernameController,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a username';
+                      }
+                      if (value.length < 2) {
+                        return 'Username must be at least 2 characters';
+                      }
+                      return null;
+                    },
                     decoration: _buildInputDecoration(
-                      hintText: 'Email',
-                      icon: Icons.email,
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: passwordController,
-                    validator: InputValidator.validatePassword,
-                    obscureText: true,
-                    decoration: _buildInputDecoration(
-                      hintText: 'Password',
-                      icon: Icons.lock,
+                      hintText: 'Username',
+                      icon: Icons.person,
                     ),
                     style: const TextStyle(color: Colors.white),
                   ),
@@ -169,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           )
                         : const Text(
-                            'LOGIN',
+                            'ENTER',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: AppDimens.fontMedium,
@@ -177,281 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                   ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        "Don't have an account? ",
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const SignupScreen(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Sign up',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  InputDecoration _buildInputDecoration({
-    required String hintText,
-    required IconData icon,
-  }) {
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: const TextStyle(color: Colors.white70),
-      prefixIcon: Icon(icon, color: Colors.white70),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
-        borderSide: const BorderSide(color: Colors.white70),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
-        borderSide: const BorderSide(color: Colors.white70),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
-        borderSide: const BorderSide(color: AppColors.primary),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
-    );
-  }
-}
-
-// Signup Screen (คล้ายกัน - จะลดไป)
-class SignupScreen extends StatefulWidget {
-  const SignupScreen({Key? key}) : super(key: key);
-
-  @override
-  State<SignupScreen> createState() => _SignupScreenState();
-}
-
-class _SignupScreenState extends State<SignupScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final emailController = TextEditingController();
-  final usernameController = TextEditingController();
-  final passwordController = TextEditingController();
-  final confirmPasswordController = TextEditingController();
-  bool isLoading = false;
-  String? errorMessage;
-
-  @override
-  void dispose() {
-    emailController.dispose();
-    usernameController.dispose();
-    passwordController.dispose();
-    confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> signup() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
-
-    try {
-      final result = await AuthService.signup(
-        email: emailController.text.trim(),
-        username: usernameController.text.trim(),
-        password: passwordController.text,
-        confirmPassword: confirmPasswordController.text,
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        isLoading = false;
-      });
-
-      if (result == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created! Please login.')),
-        );
-        Navigator.of(context).pushReplacementNamed('/login');
-      } else {
-        setState(() {
-          errorMessage = result;
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        isLoading = false;
-        errorMessage = 'An error occurred. Please try again.';
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: AppColors.loginGradient,
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(AppDimens.paddingLarge),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 30),
-                    Text(
-                      'CREATE ACCOUNT',
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 30),
-                    TextFormField(
-                      controller: usernameController,
-                      validator: InputValidator.validateUsername,
-                      decoration: _buildInputDecoration(
-                        hintText: 'Username',
-                        icon: Icons.person,
-                      ),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    const SizedBox(height: 15),
-                    TextFormField(
-                      controller: emailController,
-                      validator: InputValidator.validateEmail,
-                      decoration: _buildInputDecoration(
-                        hintText: 'Email',
-                        icon: Icons.email,
-                      ),
-                      style: const TextStyle(color: Colors.white),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 15),
-                    TextFormField(
-                      controller: passwordController,
-                      validator: InputValidator.validatePassword,
-                      obscureText: true,
-                      decoration: _buildInputDecoration(
-                        hintText: 'Password (min 6 characters)',
-                        icon: Icons.lock,
-                      ),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    const SizedBox(height: 15),
-                    TextFormField(
-                      controller: confirmPasswordController,
-                      validator: (value) =>
-                          InputValidator.validateConfirmPassword(
-                            passwordController.text,
-                            value,
-                          ),
-                      obscureText: true,
-                      decoration: _buildInputDecoration(
-                        hintText: 'Confirm Password',
-                        icon: Icons.lock,
-                      ),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    if (errorMessage != null) ...[
-                      const SizedBox(height: 15),
-                      Text(
-                        errorMessage!,
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontSize: AppDimens.fontMedium,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                    const SizedBox(height: 30),
-                    ElevatedButton(
-                      onPressed: isLoading ? null : signup,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppDimens.radiusSmall,
-                          ),
-                        ),
-                      ),
-                      child: isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                          : const Text(
-                              'SIGN UP',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: AppDimens.fontMedium,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          'Already have an account? ',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: const Text(
-                            'Login',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
               ),
             ),
           ),
@@ -499,6 +218,7 @@ class AnimeReviewScreen extends StatefulWidget {
 class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
   int? selectedAnimeId;
   late List<AnimeReview> animeReviews;
+  int currentTab = 0; // 0 = gallery, 1 = favorites, 2 = profile
 
   @override
   void initState() {
@@ -513,9 +233,20 @@ class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
       if (anime == null) {
         return Scaffold(body: Center(child: Text('Anime not found')));
       }
+      // Load persisted comments for this anime
+      _loadCommentsForAnime(anime);
       return _buildDetailScreen(anime);
     }
-    return _buildMainScreen();
+
+    // Return appropriate screen based on tab
+    switch (currentTab) {
+      case 1:
+        return _buildFavoritesScreen();
+      case 2:
+        return _buildProfileScreen();
+      default:
+        return _buildMainScreen();
+    }
   }
 
   Widget _buildMainScreen() {
@@ -785,6 +516,446 @@ class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: _buildBottomNavBar(),
+    );
+  }
+
+  Widget _buildFavoritesScreen() {
+    final user = AuthService.getCurrentUser();
+    final favorites = user?.favorites ?? [];
+    final favoriteAnimes = favorites
+        .map((id) => AnimeDataProvider.getAnimeById(id))
+        .whereType<AnimeReview>()
+        .toList();
+
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: AppColors.mainGradient,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(AppDimens.paddingLarge),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'FAVORITES',
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                          ),
+                    ),
+                    Icon(Icons.favorite, color: Colors.red.shade400, size: 28),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: favoriteAnimes.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No favorites yet',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: AppDimens.fontLarge,
+                          ),
+                        ),
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(AppDimens.paddingMedium),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: AppDimens.paddingMedium,
+                              crossAxisSpacing: AppDimens.paddingMedium,
+                              childAspectRatio: 0.7,
+                            ),
+                        itemCount: favoriteAnimes.length,
+                        itemBuilder: (context, index) {
+                          final anime = favoriteAnimes[index];
+                          return GestureDetector(
+                            onTap: () =>
+                                setState(() => selectedAnimeId = anime.id),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(
+                                  AppDimens.radiusLarge,
+                                ),
+                                image: DecorationImage(
+                                  image: AssetImage(anime.imagePath),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              child: Stack(
+                                children: [
+                                  // Overlay gradient
+                                  Positioned.fill(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                          AppDimens.radiusLarge,
+                                        ),
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Colors.transparent,
+                                            Colors.black.withOpacity(0.8),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Icon(
+                                      Icons.favorite,
+                                      color: Colors.red.shade400,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(
+                                        AppDimens.paddingMedium,
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            anime.title,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: AppDimens.fontMedium,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.star,
+                                                color: Colors.amber,
+                                                size: 14,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                anime.rating.toString(),
+                                                style: const TextStyle(
+                                                  color: Colors.amber,
+                                                  fontSize: AppDimens.fontSmall,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: _buildBottomNavBar(),
+    );
+  }
+
+  Widget _buildProfileScreen() {
+    final user = AuthService.getCurrentUser();
+    final favoriteCount = user?.favorites.length ?? 0;
+
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: AppColors.mainGradient,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 40),
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.primary,
+                        AppColors.primary.withOpacity(0.6),
+                      ],
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      (user?.username ?? 'User')[0].toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  user?.username ?? 'Unknown',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                GestureDetector(
+                  onTap: favoriteCount > 0
+                      ? () {
+                          setState(() {
+                            currentTab = 1;
+                          });
+                        }
+                      : null,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.paddingLarge,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(
+                        AppDimens.radiusLarge,
+                      ),
+                      color: Colors.white.withOpacity(0.1),
+                      border: favoriteCount > 0
+                          ? Border.all(
+                              color: AppColors.primary.withOpacity(0.5),
+                              width: 2,
+                            )
+                          : null,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppDimens.paddingLarge),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Favorite Animes',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: AppDimens.fontMedium,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(
+                                    AppDimens.radiusSmall,
+                                  ),
+                                  color: AppColors.primary,
+                                ),
+                                child: Text(
+                                  '$favoriteCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: AppDimens.fontMedium,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 15),
+                          if (favoriteCount == 0)
+                            Text(
+                              'No favorites yet. Add some anime to your favorites!',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: AppDimens.fontSmall,
+                              ),
+                              textAlign: TextAlign.center,
+                            )
+                          else
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Tap to view your favorites',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: AppDimens.fontSmall,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  Icons.arrow_forward,
+                                  color: AppColors.primary,
+                                  size: 16,
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.paddingLarge,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppDimens.radiusLarge),
+                    color: Colors.white.withOpacity(0.1),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppDimens.paddingLarge),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'About',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: AppDimens.fontMedium,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Anime Review App',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: AppDimens.fontSmall,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          'Discover and review your favorite anime',
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: AppDimens.fontSmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+                Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.paddingLarge,
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      AuthService.logout();
+                      Navigator.of(context).pushReplacementNamed('/login');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade700,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppDimens.radiusSmall,
+                        ),
+                      ),
+                    ),
+                    child: const Text(
+                      'LOGOUT',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: AppDimens.fontMedium,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: _buildBottomNavBar(),
+    );
+  }
+
+  Widget _buildBottomNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.7),
+        border: Border(
+          top: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+        ),
+      ),
+      child: BottomNavigationBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        currentIndex: currentTab,
+        onTap: (index) {
+          setState(() {
+            currentTab = index;
+          });
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.home,
+              color: currentTab == 0 ? AppColors.primary : Colors.white54,
+            ),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.favorite,
+              color: currentTab == 1 ? Colors.red.shade400 : Colors.white54,
+            ),
+            label: 'Favorites',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.person,
+              color: currentTab == 2 ? AppColors.primary : Colors.white54,
+            ),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 
@@ -927,8 +1098,17 @@ class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () {},
-                              icon: const Icon(Icons.thumb_up, size: 20),
+                              onPressed: () =>
+                                  setState(() => anime.toggleLike()),
+                              icon: Icon(
+                                anime.isLiked
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                size: 20,
+                                color: anime.isLiked
+                                    ? Colors.red
+                                    : Colors.white,
+                              ),
                               label: Text('${anime.likes}'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
@@ -946,9 +1126,9 @@ class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () {},
+                              onPressed: () => _showCommentDialog(anime),
                               icon: const Icon(Icons.comment, size: 20),
-                              label: Text('${anime.comments}'),
+                              label: Text('${anime.commentCount}'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 padding: const EdgeInsets.symmetric(
@@ -964,9 +1144,41 @@ class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
                           ),
                           const SizedBox(width: 12),
                           ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () async {
+                              final user = AuthService.getCurrentUser();
+                              if (user != null) {
+                                setState(() {
+                                  if (user.isFavorite(anime.id)) {
+                                    user.removeFavorite(anime.id);
+                                  } else {
+                                    user.addFavorite(anime.id);
+                                  }
+                                });
+                                // Save favorites to persistent storage
+                                await StorageService.saveFavorites(
+                                  user.username,
+                                  user.favorites,
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      user.isFavorite(anime.id)
+                                          ? 'Added to favorites'
+                                          : 'Removed from favorites',
+                                    ),
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              }
+                            },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
+                              backgroundColor:
+                                  AuthService.getCurrentUser()?.isFavorite(
+                                        anime.id,
+                                      ) ??
+                                      false
+                                  ? Colors.red.shade700
+                                  : AppColors.primary,
                               padding: const EdgeInsets.all(14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(
@@ -974,11 +1186,84 @@ class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
                                 ),
                               ),
                             ),
-                            child: const Icon(Icons.share, size: 20),
+                            child: Icon(
+                              (AuthService.getCurrentUser()?.isFavorite(
+                                        anime.id,
+                                      ) ??
+                                      false)
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              size: 20,
+                              color: Colors.white,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 20),
+                      // Comments Section
+                      if (anime.commentCount > 0) ...[
+                        Text(
+                          'Comments (${anime.commentCount})',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: AppDimens.fontLarge,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...anime.commentsList
+                            .map(
+                              (comment) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Container(
+                                  padding: const EdgeInsets.all(
+                                    AppDimens.paddingMedium,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(
+                                      AppDimens.radiusMedium,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            comment.username,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          Text(
+                                            _formatTime(comment.timestamp),
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: AppDimens.fontSmall,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        comment.text,
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          height: 1.6,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ],
                     ],
                   ),
                 ),
@@ -986,6 +1271,133 @@ class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inSeconds < 60) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    }
+  }
+
+  Future<void> _loadCommentsForAnime(AnimeReview anime) async {
+    final savedComments = await StorageService.loadComments(anime.id);
+    if (savedComments.isNotEmpty && anime.commentsList.isEmpty) {
+      setState(() {
+        anime.commentsList.addAll(savedComments);
+      });
+    }
+  }
+
+  void _showCommentDialog(AnimeReview anime) {
+    final usernameController = TextEditingController();
+    final commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2D1B3D),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Add Comment',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: usernameController,
+                decoration: InputDecoration(
+                  hintText: 'Your Name',
+                  hintStyle: const TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.1),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Colors.white30),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Colors.white30),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: commentController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Your Comment',
+                  hintStyle: const TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.1),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Colors.white30),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Colors.white30),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (usernameController.text.isNotEmpty &&
+                  commentController.text.isNotEmpty) {
+                setState(() {
+                  anime.addComment(
+                    usernameController.text,
+                    commentController.text,
+                  );
+                });
+                // Save comments to persistent storage
+                await StorageService.saveComments(anime.id, anime.commentsList);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Comment added!')));
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Post'),
+          ),
+        ],
       ),
     );
   }
@@ -1011,14 +1423,16 @@ class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             content,
             style: const TextStyle(
               color: Colors.white70,
               fontSize: AppDimens.fontMedium,
-              height: 1.5,
+              height: 1.8,
+              letterSpacing: 0.2,
             ),
+            textAlign: TextAlign.justify,
           ),
         ],
       ),
@@ -1034,9 +1448,14 @@ class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
       padding: const EdgeInsets.all(AppDimens.paddingMedium),
       decoration: BoxDecoration(
         color: isPositive
-            ? Colors.green.withOpacity(0.2)
-            : Colors.red.withOpacity(0.2),
+            ? Colors.green.withOpacity(0.15)
+            : Colors.red.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppDimens.radiusMedium),
+        border: Border.all(
+          color: isPositive
+              ? Colors.greenAccent.withOpacity(0.3)
+              : Colors.redAccent.withOpacity(0.3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1047,18 +1466,36 @@ class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
               color: isPositive ? Colors.greenAccent : Colors.redAccent,
               fontSize: AppDimens.fontMedium,
               fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           ...items.map(
             (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                '${isPositive ? '✓' : '✗'} $item',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: AppDimens.fontSmall,
-                ),
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isPositive ? '✓' : '✗',
+                    style: TextStyle(
+                      color: isPositive ? Colors.greenAccent : Colors.redAccent,
+                      fontSize: AppDimens.fontMedium,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: AppDimens.fontSmall,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

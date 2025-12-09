@@ -1,16 +1,34 @@
 // Simple in-app authentication service
-class User {
-  final String email;
-  final String password;
-  final String username;
+import 'storage_service.dart';
 
-  User({required this.email, required this.password, required this.username});
+class User {
+  final String username;
+  final List<int> favorites; // List of anime IDs
+
+  User({required this.username, List<int>? favorites})
+    : favorites = favorites ?? [];
+
+  // Add anime to favorites
+  void addFavorite(int animeId) {
+    if (!favorites.contains(animeId)) {
+      favorites.add(animeId);
+    }
+  }
+
+  // Remove anime from favorites
+  void removeFavorite(int animeId) {
+    favorites.remove(animeId);
+  }
+
+  // Check if anime is in favorites
+  bool isFavorite(int animeId) {
+    return favorites.contains(animeId);
+  }
 }
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
   static User? _currentUser;
-  static final List<User> registeredUsers = [];
 
   factory AuthService() {
     return _instance;
@@ -28,66 +46,32 @@ class AuthService {
     return _currentUser;
   }
 
-  // Sign up new user
-  static Future<String?> signup({
-    required String email,
-    required String username,
-    required String password,
-    required String confirmPassword,
-  }) async {
-    // Validate inputs
-    if (email.isEmpty || username.isEmpty || password.isEmpty) {
-      return 'Please fill in all fields';
+  // Login user (no password required)
+  static Future<String?> login({required String username}) async {
+    if (username.isEmpty) {
+      return 'Please enter a username';
     }
 
-    if (password != confirmPassword) {
-      return 'Passwords do not match';
+    if (username.length < 2) {
+      return 'Username must be at least 2 characters';
     }
 
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters';
+    // Create/login user with just username
+    _currentUser = User(username: username);
+
+    // Load persisted favorites from storage
+    final savedFavorites = await StorageService.loadFavorites(username);
+    if (savedFavorites.isNotEmpty) {
+      _currentUser!.favorites.addAll(savedFavorites);
     }
 
-    // Check if email already exists
-    if (registeredUsers.any((user) => user.email == email)) {
-      return 'Email already registered';
-    }
-
-    // Check if username already exists
-    if (registeredUsers.any((user) => user.username == username)) {
-      return 'Username already taken';
-    }
-
-    // Create new user
-    final newUser = User(email: email, password: password, username: username);
-
-    registeredUsers.add(newUser);
     return null; // Success
   }
 
-  // Login user
-  static Future<String?> login({
-    required String email,
-    required String password,
-  }) async {
-    if (email.isEmpty || password.isEmpty) {
-      return 'Please fill in all fields';
-    }
-
-    // Find user with matching email and password
-    try {
-      final user = registeredUsers.firstWhere(
-        (user) => user.email == email && user.password == password,
-      );
-      _currentUser = user;
-      return null; // Success
-    } catch (e) {
-      return 'Invalid email or password';
-    }
-  }
-
   // Logout user
-  static void logout() {
+  static Future<void> logout() async {
     _currentUser = null;
+    // Clear all stored data on logout
+    await StorageService.clearAll();
   }
 }
