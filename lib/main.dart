@@ -9,7 +9,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
 
 // Login Screen
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -209,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
 // Anime Review Screen (เหมือนเดิม แต่ใช้ Constants และ AnimeDataProvider)
 class AnimeReviewScreen extends StatefulWidget {
-  const AnimeReviewScreen({Key? key}) : super(key: key);
+  const AnimeReviewScreen({super.key});
 
   @override
   State<AnimeReviewScreen> createState() => _AnimeReviewScreenState();
@@ -1262,7 +1262,7 @@ class _AnimeReviewScreenState extends State<AnimeReviewScreen> {
                                 ),
                               ),
                             )
-                            .toList(),
+                            ,
                       ],
                     ],
                   ),
